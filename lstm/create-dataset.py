@@ -15,7 +15,7 @@ def fetch_hourly_data(tickers, start_date, end_date):
 
             try:
                 df = yf.download(
-                    ticker,
+                    ticker, 
                     start=current_start.strftime('%Y-%m-%d'),
                     end=current_end.strftime('%Y-%m-%d'),
                     interval="1h",
