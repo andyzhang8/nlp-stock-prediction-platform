@@ -1,0 +1,12 @@
+2025-01-26 03:15:05,780 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): query1.finance.yahoo.com:443
+2025-01-26 03:15:05,947 - urllib3.connectionpool - DEBUG - https://query1.finance.yahoo.com:443 "GET /v8/finance/chart/AAPL?interval=1h&range=1d HTTP/1.1" 200 1920
+2025-01-26 03:21:32,549 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): query1.finance.yahoo.com:443
+2025-01-26 03:21:32,701 - urllib3.connectionpool - DEBUG - https://query1.finance.yahoo.com:443 "GET /v8/finance/chart/AAPL?interval=1h&range=1d HTTP/1.1" 200 1920
+2025-01-26 03:22:09,065 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): query1.finance.yahoo.com:443
+2025-01-26 03:22:09,224 - urllib3.connectionpool - DEBUG - https://query1.finance.yahoo.com:443 "GET /v8/finance/chart/s?interval=1h&range=1d HTTP/1.1" 200 1907
+2025-01-26 03:22:23,792 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): query1.finance.yahoo.com:443
+2025-01-26 03:22:23,953 - urllib3.connectionpool - DEBUG - https://query1.finance.yahoo.com:443 "GET /v8/finance/chart/nigga?interval=1h&range=1d HTTP/1.1" 404 108
+2025-01-26 03:22:23,955 - __main__ - ERROR - Query for {ticker} failed on {endpoint}!
+2025-01-26 03:24:09,634 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): query1.finance.yahoo.com:443
+2025-01-26 03:24:09,801 - urllib3.connectionpool - DEBUG - https://query1.finance.yahoo.com:443 "GET /v8/finance/chart/nigga?interval=1h&range=1d HTTP/1.1" 404 108
+2025-01-26 03:24:09,803 - __main__ - ERROR - Query for nigga failed on Endpoints.STOCK_DATA!
