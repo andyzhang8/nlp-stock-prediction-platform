@@ -25,7 +25,7 @@ class StockData:
         self.tickers = self.df.Company
 
         logging.basicConfig(
-            level=logging.DEBUG,  # Set the minimum log level
+            level=logging.WARNING,  # Set the minimum log level
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # Log format
             handlers=[
                 logging.FileHandler("app.log"),  # Log to a file
@@ -66,64 +66,93 @@ class StockData:
             self.logger.warning(f"Ticker {ticker} not found on {endpoint}!")
             return {}
         
-        data = data[0]
-
-        timestamp = data['timestamp']
-        indicators = data['indicators']['quote'][0]
-
+        data: Dict = data[0]
+       
+        if any(key not in data for key in ['timestamp', 'indicators']):
+            self.logger.warning(f"Timestamp and indicators not found for {ticker}!")
+            return {}
+    
+        timestamp: int = data['timestamp']
+        if not all(isinstance(value, int) for value in timestamp):
+            self.logger.warning(f"Invalid timetamp data from {ticker}!")
+            return {}
+        
+        indicators: Dict = data['indicators']['quote'][0]
+        if not self._validate_data_format(indicators):
+            self.logger.warning(f"Invalid price data from {ticker}!")
+            return {}
+        
         for key, values in indicators.items():
-            indicators[key] = [round(value, 2) for value in values]
+            indicators[key] = [round(value, 2) if value is not None else -1 for value in values]
+
 
         indicators['timestamps'] = timestamp
-
         out[ticker] = indicators
 
         return out
 
-    def update_stock_data(self, new_data):
+    def update_stock_data(self, new_data: Dict):
         """
-        Updates the MongoDB collection with stock data. Appends data if the company exists, otherwise creates a new entry.
+        Updates the MongoDB collection with stock data. Uses timestamps as the primary keys.
+        Each timestamp contains a dictionary of companies with their stock data.
 
-        :param db: The MongoDB database instance.
-        :param collection_name: The name of the MongoDB collection.
         :param new_data: Dictionary containing stock data keyed by company name.
         """
         
         for company, data in new_data.items():
-            existing_entry = self.collection.find_one({"ticker": company})
+            for i, timestamp in enumerate(data["timestamps"]):
+                company_data = {
+                    "volume": data["volume"][i],
+                    "high": data["high"][i],
+                    "low": data["low"][i],
+                    "open": data["open"][i],
+                    "close": data["close"][i],
+                }
 
-            if existing_entry:
-                updated_data = {}
-                for key in ["timestamps", "volume", "high", "low", "open", "close"]:
-                    if key in data:
-                        updated_values = existing_entry[key] + data[key]
-                        sorted_data = sorted(
-                            zip(updated_values, *[existing_entry[k] + data[k] for k in data if k != "timestamps"]),
-                            key=lambda x: x[0]
-                        )
-                        sorted_values = list(zip(*sorted_data))
-                        updated_data[key] = list(sorted_values[0])
-                        for i, field in enumerate(["volume", "high", "low", "open", "close"], start=1):
-                            updated_data[field] = list(sorted_values[i])
-                
-                self.collection.update_one(
-                    {"ticker": company},
-                    {"$set": updated_data}
-                )
-            else:
-                data["ticker"] = company
-                self.collection.insert_one(data)
+                existing_entry = self.collection.find_one({"_id": timestamp})
+
+                if existing_entry:
+                    existing_entry["companies"][company] = company_data
+                    self.collection.update_one(
+                        {"_id": timestamp},
+                        {"$set": {"companies": existing_entry["companies"]}}
+                    )
+                else:
+                    self.collection.insert_one({
+                        "_id": timestamp,
+                        "companies": {company: company_data}
+                    })
+
+
         
     def update_db(self):
+        start_time = time.time()
         for ticker in self.tickers:
             self.update_stock_data(self.get_data(ticker, Endpoints.STOCK_DATA, "1h", "1d"))
             time.sleep(1)
+
+        duration = time.time() - start_time
+        logging.info(f"Parsed {len(self.tickers)} tickers in {duration:.2f}s")
+
+
+    def _validate_data_format(self, data):
+        required_keys = ['open', 'high', 'volume', 'low', 'close']
+        
+        if not all(key in data for key in required_keys):
+            return False
+        
+        for key in required_keys:
+            values = data[key]
+            if not isinstance(values, list):
+                return False
             
+        return True
+                
 
 
 
 if __name__ == '__main__':
-    stock = StockData()
-    # print(stock.get_data('AAPL', Endpoints.STOCK_DATA, "1h", "1d"))
+    stock = StockData()    # print(stock.get_data('AKA', Endpoints.STOCK_DATA, "1h", "1d"))
+
     stock.update_db()
 
