@@ -3,6 +3,8 @@ import pandas as pd
 import time
 from enum import Enum
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 from typing import List, Dict, Any
 
@@ -125,11 +127,34 @@ class StockData:
 
 
         
-    def update_db(self):
+    def update_db(self, num_workers=4):
         start_time = time.time()
-        for ticker in self.tickers:
-            self.update_stock_data(self.get_data(ticker, Endpoints.STOCK_DATA, "1h", "1d"))
-            time.sleep(1)
+        aggregated_data = {}
+        lock = threading.Lock()
+        
+        def threaded_fetch_data(ticker):
+            with lock:
+                data = self.get_data(ticker, Endpoints.STOCK_DATA, "1h", "1y")
+                time.sleep(0.5)
+            return ticker, data
+
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            future_to_ticker = {
+                executor.submit(threaded_fetch_data, ticker): ticker for ticker in self.tickers
+            }
+            for future in as_completed(future_to_ticker):
+                ticker = future_to_ticker[future]
+                ticker, data = future.result()
+                aggregated_data[ticker] = data
+
+                if len(aggregated_data) == num_workers:
+                    self.update_stock_data(aggregated_data)
+                    aggregated_data = {}
+
+        if aggregated_data:
+            self.update_stock_data(aggregated_data)
+
+            
 
         duration = time.time() - start_time
         logging.info(f"Parsed {len(self.tickers)} tickers in {duration:.2f}s")
@@ -152,7 +177,7 @@ class StockData:
 
 
 if __name__ == '__main__':
-    stock = StockData()    # print(stock.get_data('AKA', Endpoints.STOCK_DATA, "1h", "1d"))
-
+    stock = StockData()
+    # print(stock.get_data('NVDA', Endpoints.STOCK_DATA, "1h", "1d"))
     stock.update_db()
 
