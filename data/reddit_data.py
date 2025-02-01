@@ -1,13 +1,15 @@
 '''Fetches posts and comments from subreddits and saves them to a database'''
 
 import requests
+from typing import List, Dict
 
-from db_helper import DB
+import requests
+from data.db_helper import DB
 
 database = DB(collection="reddit")
 
 
-def fetch_and_save_posts(subreddit: str, limit=100):
+def fetch_and_save_posts(subreddit, limit=100):
     # Fetch posts from Reddit's JSON endpoint
     url = f"https://www.reddit.com/r/{subreddit}/new.json?limit={limit}"
     headers = {"User-Agent": "Mozilla/5.0"}
